@@ -16,6 +16,7 @@
 <section id="loginBox" class="panel login"><h2>Login Admin</h2><p class="muted">Masuk menggunakan akun admin yang telah diundang.</p>
 <form id="loginForm"><div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required value="inioza013@gmail.com"></div><div class="field"><label for="password">Kata sandi</label><input id="password" type="password" autocomplete="current-password" required></div><button id="loginBtn" type="submit">Masuk ke Panel</button></form><div id="loginMsg" aria-live="polite"></div>
 </section>
+<section id="activateBox" class="panel login hidden"><h2>Aktivasi akun admin</h2><p class="muted">Tautan undangan valid terdeteksi. Buat kata sandi baru untuk akun admin JFM.</p><form id="activateForm"><div class="field"><label for="newPassword">Kata sandi baru (minimal 8 karakter)</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></div><div class="field"><label for="confirmPassword">Ulangi kata sandi</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></div><button id="activateBtn" type="submit">Aktifkan akun</button></form><div id="activateMsg" aria-live="polite"></div></section>
 <section id="dashboard" class="hidden">
 <div class="stats"><div class="stat"><span class="muted">Total tampil</span><b id="total">0</b></div><div class="stat"><span class="muted">Menunggu konfirmasi</span><b id="waiting">0</b></div><div class="stat"><span class="muted">Menunggu pembayaran</span><b id="unpaid">0</b></div><div class="stat"><span class="muted">Selesai</span><b id="done">0</b></div></div>
 <div class="panel"><div class="toolbar"><h2 style="margin:0">Daftar Pesanan</h2><span style="flex:1"></span><input id="search" placeholder="Cari kode, nama, WhatsApp…"><button id="refresh" class="secondary">Muat ulang</button></div><div id="msg" aria-live="polite"></div><div class="tablewrap"><table><thead><tr><th>Pesanan</th><th>Pelanggan</th><th>Layanan</th><th>Jumlah / Total</th><th>Pembayaran</th><th>Status & tindakan</th></tr></thead><tbody id="orders"><tr><td colspan="6" class="empty">Memuat…</td></tr></tbody></table></div></div>
@@ -38,15 +39,36 @@ async function api(method,body){
  const r=await fetch(API,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':KEY},body:body?JSON.stringify(body):undefined});
  const j=await r.json();if(!r.ok)throw new Error(j.error||'Permintaan gagal');return j;
 }
+let inviteFlow=/(?:[?&#])type=(?:invite|recovery)(?:&|$)/i.test(window.location.hash);
 function showSession(session){
- $('loginBox').classList.toggle('hidden',!!session);$('dashboard').classList.toggle('hidden',!session);$('logout').classList.toggle('hidden',!session);
- if(session)loadOrders();
+ const activate=!!session&&inviteFlow;
+ $('loginBox').classList.toggle('hidden',!!session);
+ $('activateBox').classList.toggle('hidden',!activate);
+ $('dashboard').classList.toggle('hidden',!session||activate);
+ $('logout').classList.toggle('hidden',!session);
+ if(session&&!activate)loadOrders();
 }
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();$('loginBtn').disabled=true;
  try{const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;notice($('loginMsg'),'Login berhasil. Memuat pesanan…');}
  catch(err){notice($('loginMsg'),err.message||'Login gagal.',true)}
  finally{$('loginBtn').disabled=false}
+});
+$('activateForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const password=$('newPassword').value,confirm=$('confirmPassword').value;
+ if(password.length<8){notice($('activateMsg'),'Kata sandi minimal 8 karakter.',true);return}
+ if(password!==confirm){notice($('activateMsg'),'Konfirmasi kata sandi tidak sama.',true);return}
+ $('activateBtn').disabled=true;
+ try{
+  const {error}=await sb.auth.updateUser({password});
+  if(error)throw error;
+  inviteFlow=false;
+  history.replaceState(null,'',window.location.pathname);
+  notice($('activateMsg'),'Kata sandi berhasil dibuat. Membuka dashboard…');
+  showSession((await sb.auth.getSession()).data.session);
+ }catch(err){notice($('activateMsg'),err.message||'Aktivasi gagal.',true)}
+ finally{$('activateBtn').disabled=false}
 });
 $('logout').addEventListener('click',async()=>{await sb.auth.signOut();orders=[];showSession(null)});
 sb.auth.onAuthStateChange((_event,session)=>showSession(session));
