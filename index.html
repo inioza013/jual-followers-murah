@@ -46,7 +46,7 @@
       <div class="field"><label for="wa">Nomor WhatsApp Anda</label><input id="wa" type="tel" placeholder="08xxxxxxxxxx" autocomplete="tel"></div>
       <div class="field"><label for="service">Platform dan layanan</label><select id="service"></select></div>
       <div class="field"><label for="qty">Jumlah pesanan (unit)</label><input id="qty" type="number" inputmode="numeric" min="50" step="1" value="50" required><span class="hint">Minimal pemesanan 50 unit. Anda dapat mengetik jumlah sendiri.</span></div>
-      <div class="field"><label for="target">Tautan akun / konten / toko</label><input id="target" type="url" placeholder="https://..."></div>
+      <div class="field"><label for="target" id="target-label">Tautan akun / konten / toko</label><input id="target" type="text" placeholder="https://..." autocomplete="off"><span class="hint" id="target-hint">Masukkan tautan akun, konten, atau toko tujuan.</span></div>
       <div class="field"><label>Verifikasi keamanan</label><div class="cf-turnstile" data-sitekey="0x4AAAAAAFvd1In6fbUdl2Eb" data-action="jfm_order" data-theme="dark"></div><span class="hint">Selesaikan verifikasi sebelum mengirim pesanan.</span></div>
       <div class="field"><label for="payment">Preferensi pembayaran</label><select id="payment"><option>Ingin konfirmasi metode pembayaran</option><option>QRIS (setelah dikonfirmasi admin)</option><option>Transfer bank (setelah dikonfirmasi admin)</option></select></div>
       <div class="total"><span>Estimasi total katalog</span><strong id="total">Rp0</strong></div>
@@ -73,6 +73,9 @@ const products=[
 ];
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const catalog=document.getElementById("catalog"),service=document.getElementById("service"),qty=document.getElementById("qty"),total=document.getElementById("total");
+const targetInput=document.getElementById("target"),targetLabel=document.getElementById("target-label"),targetHint=document.getElementById("target-hint");
+function usernameMode(){const p=products[Number(service.value)];return !!p&&p[1]==="Followers"&&["Instagram","TikTok","YouTube","Facebook"].includes(p[0]);}
+function updateTargetGuidance(){const mode=usernameMode();targetLabel.textContent=mode?"Username akun (tanpa password)":"Tautan akun / konten / toko";targetInput.placeholder=mode?"Contoh: @namapengguna":"https://...";targetHint.textContent=mode?"Masukkan username saja, tanpa password atau OTP. Tautan profil juga dapat digunakan.":"Untuk Likes, Views, dan layanan Shopee, masukkan tautan lengkap tujuan.";}
 products.forEach((p,i)=>{
  const card=document.createElement("article");const cheapest=p[2]===5000;card.className="product"+(cheapest?" featured":"");
  card.innerHTML='<span class="tag">'+p[0]+'</span><h3>'+p[1]+'</h3><div class="price">'+rupiah(p[2])+' <small>/ 1.000 unit</small></div><p class="starting">Mulai '+rupiah(p[2]*50/1000)+' / 50 unit</p>'+(cheapest?'<span class="best-value">✦ PALING HEMAT</span>':'')+'<button class="btn secondary" type="button" data-index="'+i+'">Pilih layanan</button>';
@@ -80,12 +83,23 @@ products.forEach((p,i)=>{
  const opt=document.createElement("option");opt.value=i;opt.textContent=p[0]+" — "+p[1]+" ("+rupiah(p[2])+"/1.000)";service.appendChild(opt);
 });
 function updateTotal(){const p=products[Number(service.value)||0],count=Number(qty.value);total.textContent=Number.isSafeInteger(count)&&count>=50?rupiah(p[2]*count/1000):"—"}
-service.addEventListener("change",updateTotal);qty.addEventListener("input",updateTotal);
+service.addEventListener("change",()=>{updateTotal();updateTargetGuidance()});qty.addEventListener("input",updateTotal);updateTargetGuidance();
 catalog.addEventListener("click",e=>{const b=e.target.closest("button[data-index]");if(!b)return;service.value=b.dataset.index;updateTotal();document.getElementById("pesan").scrollIntoView({behavior:"smooth"})});
 const orderButton=document.getElementById("send");
 const orderStatus=document.getElementById("order-status");
 orderButton.addEventListener("click",async()=>{
- const name=document.getElementById("customer").value.trim(),phone=document.getElementById("wa").value.trim(),p=products[Number(service.value)],count=Number(qty.value),target=document.getElementById("target").value.trim(),payment=document.getElementById("payment").value;
+ const name=document.getElementById("customer").value.trim(),phone=document.getElementById("wa").value.trim(),p=products[Number(service.value)],count=Number(qty.value),targetRaw=targetInput.value.trim(),payment=document.getElementById("payment").value;
+  let target=targetRaw;
+  if(usernameMode()){
+    if(targetRaw.startsWith("http://")||targetRaw.startsWith("https://")){
+      try{const u=new URL(targetRaw);const hosts={Instagram:["instagram.com","www.instagram.com"],TikTok:["tiktok.com","www.tiktok.com"],YouTube:["youtube.com","www.youtube.com","youtu.be"],Facebook:["facebook.com","www.facebook.com","m.facebook.com"]};if(!hosts[p[0]].includes(u.hostname.toLowerCase()))throw new Error();target=u.href;}catch{alert("Tautan harus berasal dari platform yang dipilih, atau masukkan username saja.");return;}
+    }else{
+      const handle=targetRaw.replace(/^@/,"");if(!/^[A-Za-z0-9._-]{1,100}$/.test(handle)){alert("Masukkan username yang valid tanpa spasi. Contoh: namapengguna");targetInput.focus();return;}
+      const profileBase={Instagram:"https://www.instagram.com/",TikTok:"https://www.tiktok.com/@",YouTube:"https://www.youtube.com/@",Facebook:"https://www.facebook.com/"};target=profileBase[p[0]]+handle+(p[0]==="Instagram"?"/":"");
+    }
+  }else{
+    try{const u=new URL(targetRaw);if(!["http:","https:"].includes(u.protocol))throw new Error();target=u.href;}catch{alert("Masukkan tautan lengkap yang diawali https:// atau http://");targetInput.focus();return;}
+  }
  const token=document.querySelector('[name="cf-turnstile-response"]')?.value||"";
  if(!name||!phone||!target){alert("Mohon lengkapi nama, nomor WhatsApp, dan tautan tujuan.");return}
  if(!Number.isSafeInteger(count)||count<50){alert("Minimal pemesanan adalah 50 unit. Masukkan jumlah bulat 50 atau lebih.");qty.focus();return}
