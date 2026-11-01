@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#07152e">
   <meta name="description" content="JUAL FOLLOWERS MURAH (JFM) — katalog layanan media sosial. Tanyakan ketersediaan layanan dan konfirmasi pesanan melalui WhatsApp.">
   <title>JFM — JUAL FOLLOWERS MURAH</title>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root{--bg:#061126;--panel:#0b1b38;--panel2:#10264b;--blue:#247bff;--cyan:#5bc8ff;--text:#f4f7ff;--muted:#aab9d3;--line:rgba(160,190,240,.16);--gold:#a9cfff}
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 80% 0%,#12346a 0,transparent 38%),linear-gradient(180deg,#07152e,#050d1e 70%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6}
@@ -46,16 +47,17 @@
       <div class="field"><label for="service">Platform dan layanan</label><select id="service"></select></div>
       <div class="field"><label for="qty">Jumlah pesanan (unit)</label><input id="qty" type="number" inputmode="numeric" min="50" step="1" value="50" required><span class="hint">Minimal pemesanan 50 unit. Anda dapat mengetik jumlah sendiri.</span></div>
       <div class="field"><label for="target">Tautan akun / konten / toko</label><input id="target" type="url" placeholder="https://..."></div>
+      <div class="field"><label>Verifikasi keamanan</label><div class="cf-turnstile" data-sitekey="0x4AAAAAAFvd1In6fbUdl2Eb" data-action="jfm_order" data-theme="dark"></div><span class="hint">Selesaikan verifikasi sebelum mengirim pesanan.</span></div>
       <div class="field"><label for="payment">Preferensi pembayaran</label><select id="payment"><option>Ingin konfirmasi metode pembayaran</option><option>QRIS (setelah dikonfirmasi admin)</option><option>Transfer bank (setelah dikonfirmasi admin)</option></select></div>
       <div class="total"><span>Estimasi total katalog</span><strong id="total">Rp0</strong></div>
       <button class="btn" style="width:100%" id="send">Kirim permintaan melalui WhatsApp</button>
-      <p class="hint">Tombol ini mengirim permintaan konfirmasi, bukan pembayaran otomatis atau bukti bahwa pesanan telah diproses.</p>
+      <p class="hint" id="order-status" role="status" aria-live="polite">Pesanan akan disimpan ke sistem JFM setelah verifikasi berhasil, lalu Anda diarahkan ke WhatsApp untuk konfirmasi admin. Ini bukan pembayaran otomatis.</p>
     </div>
     <aside class="panel"><h3>Sebelum memesan</h3><div class="notice">Pastikan tautan tujuan benar dan dapat diakses. Jangan pernah mengirimkan kata sandi, kode OTP, atau akses login akun.</div><p class="hint" style="margin-top:18px">Harga yang tampil adalah harga katalog. Pesanan baru dianggap terkonfirmasi setelah admin memeriksa ketersediaan layanan, jumlah, biaya akhir, dan metode pembayaran.</p><p class="hint">JFM tidak menampilkan klaim jumlah pesanan, testimoni, waktu pengerjaan, atau jaminan retensi yang belum diverifikasi.</p></aside>
   </div></div></section>
   <section id="cara"><div class="wrap"><div class="section-head"><div><h2>Alur pemesanan</h2><p>Konfirmasi dilakukan secara langsung agar detail pesanan jelas.</p></div></div><div class="steps">
     <div class="step"><b>1</b><h3>Pilih layanan</h3><p>Pilih platform, jenis layanan, jumlah, dan masukkan tautan tujuan.</p></div>
-    <div class="step"><b>2</b><h3>Kirim permintaan</h3><p>Formulir akan membuka WhatsApp untuk mengirim rincian permintaan kepada admin JFM.</p></div>
+    <div class="step"><b>2</b><h3>Kirim permintaan</h3><p>Setelah verifikasi berhasil, sistem menyimpan rincian pesanan dan membuat kode pesanan sebelum membuka WhatsApp.</p></div>
     <div class="step"><b>3</b><h3>Konfirmasi dahulu</h3><p>Admin mengonfirmasi ketersediaan, total akhir, serta instruksi pembayaran sebelum transaksi.</p></div>
   </div></div></section>
   <section id="kontak"><div class="wrap"><div class="panel"><div class="section-head"><div><h2>Butuh bantuan?</h2><p>Hubungi admin JFM untuk menanyakan ketersediaan layanan dan detail pesanan.</p></div><a class="btn" href="https://wa.me/62895328696545" target="_blank" rel="noopener">WhatsApp Admin</a></div><p class="hint">WhatsApp: 0895-3286-96545</p></div></div></section>
@@ -80,13 +82,45 @@ products.forEach((p,i)=>{
 function updateTotal(){const p=products[Number(service.value)||0],count=Number(qty.value);total.textContent=Number.isSafeInteger(count)&&count>=50?rupiah(p[2]*count/1000):"—"}
 service.addEventListener("change",updateTotal);qty.addEventListener("input",updateTotal);
 catalog.addEventListener("click",e=>{const b=e.target.closest("button[data-index]");if(!b)return;service.value=b.dataset.index;updateTotal();document.getElementById("pesan").scrollIntoView({behavior:"smooth"})});
-document.getElementById("send").addEventListener("click",()=>{
+const orderButton=document.getElementById("send");
+const orderStatus=document.getElementById("order-status");
+orderButton.addEventListener("click",async()=>{
  const name=document.getElementById("customer").value.trim(),phone=document.getElementById("wa").value.trim(),p=products[Number(service.value)],count=Number(qty.value),target=document.getElementById("target").value.trim(),payment=document.getElementById("payment").value;
+ const token=document.querySelector('[name="cf-turnstile-response"]')?.value||"";
  if(!name||!phone||!target){alert("Mohon lengkapi nama, nomor WhatsApp, dan tautan tujuan.");return}
  if(!Number.isSafeInteger(count)||count<50){alert("Minimal pemesanan adalah 50 unit. Masukkan jumlah bulat 50 atau lebih.");qty.focus();return}
- const amount=p[2]*(count/1000);
- const msg="Halo Admin JFM, saya ingin meminta konfirmasi pesanan.%0A%0ANama: "+encodeURIComponent(name)+"%0AWhatsApp: "+encodeURIComponent(phone)+"%0ALayanan: "+encodeURIComponent(p[0]+" — "+p[1])+"%0AJumlah: "+count.toLocaleString("id-ID")+"%0ATautan tujuan: "+encodeURIComponent(target)+"%0APreferensi pembayaran: "+encodeURIComponent(payment)+"%0AEstimasi harga katalog: "+encodeURIComponent(rupiah(amount))+"%0A%0AMohon konfirmasi ketersediaan, total akhir, dan langkah selanjutnya.";
- window.open("https://wa.me/62895328696545?text="+msg,"_blank","noopener");
+ if(!token){alert("Mohon selesaikan verifikasi keamanan terlebih dahulu.");return}
+ orderButton.disabled=true;orderButton.textContent="Memproses pesanan...";orderStatus.textContent="Memverifikasi dan menyimpan pesanan ke sistem JFM...";
+ try{
+   const response=await fetch("https://nykxyrknobzvdzosgdkx.supabase.co/functions/v1/jfm-create-order",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({name,phone,platform:p[0],service:p[1],quantity:count,target,payment,turnstileToken:token})
+   });
+   const result=await response.json();
+   if(!response.ok||!result.success)throw new Error(result.error||"Pesanan belum berhasil disimpan.");
+   const lines=[
+     "Halo Admin JFM, saya ingin konfirmasi pesanan yang sudah saya kirim melalui website.",
+     "",
+     "Kode pesanan: "+result.orderCode,
+     "Nama: "+result.customerName,
+     "WhatsApp: "+result.customerPhone,
+     "Layanan: "+result.platform+" — "+result.service,
+     "Jumlah: "+Number(result.quantity).toLocaleString("id-ID")+" unit",
+     "Tautan tujuan: "+result.targetUrl,
+     "Preferensi pembayaran: "+(result.paymentPreference||"Belum ditentukan"),
+     "Estimasi total: "+rupiah(result.totalAmount),
+     "",
+     "Mohon konfirmasi ketersediaan layanan, total akhir, dan instruksi pembayaran. Terima kasih."
+   ];
+   const waUrl="https://wa.me/62895328696545?text="+encodeURIComponent(lines.join("\n"));
+   orderStatus.textContent="Pesanan tersimpan dengan kode "+result.orderCode+". Mengalihkan ke WhatsApp...";
+   window.location.href=waUrl;
+ }catch(error){
+   orderStatus.textContent=error.message||"Gagal mengirim pesanan. Silakan coba kembali.";
+   alert(orderStatus.textContent);
+   if(window.turnstile)window.turnstile.reset();
+   orderButton.disabled=false;orderButton.textContent="Kirim permintaan melalui WhatsApp";
+ }
 });
 document.getElementById("year").textContent=new Date().getFullYear();updateTotal();
 </script>
