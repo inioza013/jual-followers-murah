@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://inioza013.github.io/jual-followers-murah/sitemap.xml
