@@ -43,7 +43,7 @@
       <div class="field"><label for="customer">Nama pelanggan</label><input id="customer" placeholder="Nama Anda" autocomplete="name"></div>
       <div class="field"><label for="wa">Nomor WhatsApp Anda</label><input id="wa" type="tel" placeholder="08xxxxxxxxxx" autocomplete="tel"></div>
       <div class="field"><label for="service">Platform dan layanan</label><select id="service"></select></div>
-      <div class="field"><label for="qty">Jumlah pesanan</label><select id="qty"><option value="1000">1.000</option><option value="2000">2.000</option><option value="5000">5.000</option><option value="10000">10.000</option></select><span class="hint">Pilihan jumlah ini merupakan opsi awal; ketersediaan minimum dan maksimum perlu dikonfirmasi.</span></div>
+      <div class="field"><label for="qty">Jumlah pesanan (unit)</label><input id="qty" type="number" inputmode="numeric" min="50" step="1" value="50" required><span class="hint">Minimal pemesanan 50 unit. Anda dapat mengetik jumlah sendiri.</span></div>
       <div class="field"><label for="target">Tautan akun / konten / toko</label><input id="target" type="url" placeholder="https://..."></div>
       <div class="field"><label for="payment">Preferensi pembayaran</label><select id="payment"><option>Ingin konfirmasi metode pembayaran</option><option>QRIS (setelah dikonfirmasi admin)</option><option>Transfer bank (setelah dikonfirmasi admin)</option></select></div>
       <div class="total"><span>Estimasi total katalog</span><strong id="total">Rp0</strong></div>
@@ -76,12 +76,13 @@ products.forEach((p,i)=>{
  catalog.appendChild(card);
  const opt=document.createElement("option");opt.value=i;opt.textContent=p[0]+" — "+p[1]+" ("+rupiah(p[2])+"/1.000)";service.appendChild(opt);
 });
-function updateTotal(){const p=products[Number(service.value)||0];total.textContent=rupiah(p[2]*(Number(qty.value)/1000))}
-service.addEventListener("change",updateTotal);qty.addEventListener("change",updateTotal);
+function updateTotal(){const p=products[Number(service.value)||0],count=Number(qty.value);total.textContent=Number.isSafeInteger(count)&&count>=50?rupiah(p[2]*count/1000):"—"}
+service.addEventListener("change",updateTotal);qty.addEventListener("input",updateTotal);
 catalog.addEventListener("click",e=>{const b=e.target.closest("button[data-index]");if(!b)return;service.value=b.dataset.index;updateTotal();document.getElementById("pesan").scrollIntoView({behavior:"smooth"})});
 document.getElementById("send").addEventListener("click",()=>{
  const name=document.getElementById("customer").value.trim(),phone=document.getElementById("wa").value.trim(),p=products[Number(service.value)],count=Number(qty.value),target=document.getElementById("target").value.trim(),payment=document.getElementById("payment").value;
  if(!name||!phone||!target){alert("Mohon lengkapi nama, nomor WhatsApp, dan tautan tujuan.");return}
+ if(!Number.isSafeInteger(count)||count<50){alert("Minimal pemesanan adalah 50 unit. Masukkan jumlah bulat 50 atau lebih.");qty.focus();return}
  const amount=p[2]*(count/1000);
  const msg="Halo Admin JFM, saya ingin meminta konfirmasi pesanan.%0A%0ANama: "+encodeURIComponent(name)+"%0AWhatsApp: "+encodeURIComponent(phone)+"%0ALayanan: "+encodeURIComponent(p[0]+" — "+p[1])+"%0AJumlah: "+count.toLocaleString("id-ID")+"%0ATautan tujuan: "+encodeURIComponent(target)+"%0APreferensi pembayaran: "+encodeURIComponent(payment)+"%0AEstimasi harga katalog: "+encodeURIComponent(rupiah(amount))+"%0A%0AMohon konfirmasi ketersediaan, total akhir, dan langkah selanjutnya.";
  window.open("https://wa.me/62895328696545?text="+msg,"_blank","noopener");
