@@ -86,7 +86,7 @@ function render(){
  const cell=(html)=>{const td=document.createElement('td');td.innerHTML=html;tr.append(td);return td};
  cell('<b>'+esc(o.order_code)+'</b><small>'+new Date(o.created_at).toLocaleString('id-ID')+'</small>');
  cell('<b>'+esc(o.customer_name)+'</b><small>'+esc(o.customer_whatsapp)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="https://wa.me/'+encodeURIComponent(o.customer_whatsapp)+'">Buka WhatsApp</a></small>');
-  const targetValue=o.target_url||o.target_link||o.target||'';
+  const targetValue=o.target_url||o.target_link||o.target||o.profile_url||'';
    const username=getTargetUsername(targetValue,o.platform,o.service_name);
   cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small>'+(username?'<div style="margin:7px 0;padding:6px 8px;border:1px solid #3978b9;border-radius:7px;background:#10294a;color:#d7eaff;font-weight:700">Username pelanggan: '+esc(username)+'</div>':'')+'<small><a style="color:#83bdff" target="_blank" rel="noopener" href="'+safeUrl(targetValue,o.platform)+'">Target</a></small>');
  cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' unit</b><small class="money">'+money(o.total_amount)+'</small>');
@@ -103,7 +103,6 @@ function render(){
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function getTargetUsername(value,platform,service){
- if(!/followers|subscribers/i.test(String(service||'')))return '';
  try{
   const raw=String(value||'').trim();if(!raw)return '';
   const candidate=raw.includes('://')?raw:'https://'+raw;
