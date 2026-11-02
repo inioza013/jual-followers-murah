@@ -86,7 +86,7 @@ function render(){
  const cell=(html)=>{const td=document.createElement('td');td.innerHTML=html;tr.append(td);return td};
  cell('<b>'+esc(o.order_code)+'</b><small>'+new Date(o.created_at).toLocaleString('id-ID')+'</small>');
  cell('<b>'+esc(o.customer_name)+'</b><small>'+esc(o.customer_whatsapp)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="https://wa.me/'+encodeURIComponent(o.customer_whatsapp)+'">Buka WhatsApp</a></small>');
- cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="'+safeUrl(o.target_url)+'">Target</a></small>');
+ cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="'+safeUrl(o.target_url,o.platform)+'">Target</a></small>');
  cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' unit</b><small class="money">'+money(o.total_amount)+'</small>');
  cell('<span class="status">'+(payLabels[p.payment_status]||'Belum ada data')+'</span><small>'+esc(p.payment_method||'-')+'</small><small>'+esc(p.provider_reference||'')+'</small>');
  const td=cell('');
@@ -100,7 +100,22 @@ function render(){
  });
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function safeUrl(v){try{const u=new URL(v);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}}
+function safeUrl(value,platform){
+ const raw=String(value??'').trim();
+ if(!raw)return '#';
+ try{
+  const candidate=/^https?:\/\//i.test(raw)?raw:'https://'+raw;
+  const u=new URL(candidate);
+  if(!['http:','https:'].includes(u.protocol))return '#';
+  if(u.hostname.includes('.')&&!u.hostname.startsWith('.'))return u.href;
+ }catch{}
+ const handle=raw.replace(/^@/,'').replace(/^\/+|\/+$/g,'');
+ if(!/^[a-zA-Z0-9._-]{1,100}$/.test(handle))return '#';
+ const p=String(platform??'').toLowerCase();
+ const hosts={instagram:'https://www.instagram.com/',tiktok:'https://www.tiktok.com/@',youtube:'https://www.youtube.com/@',facebook:'https://www.facebook.com/'};
+ const base=hosts[p];
+ return base?base+encodeURIComponent(handle):'#';
+}
 async function loadOrders(){
  notice($('msg'),'Memuat daftar pesanan…');
  try{const data=await api('GET');orders=data.orders||[];render();$('msg').innerHTML='';}
