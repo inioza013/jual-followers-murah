@@ -92,7 +92,8 @@ const products=[
 ];
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const catalog=document.getElementById("catalog"),service=document.getElementById("service"),qty=document.getElementById("qty"),total=document.getElementById("total");
-const targetInput=document.getElementById("target"),targetLabel=document.getElementById("target-label"),targetHint=document.getElementById("target-hint");
+const qtyLabel=document.querySelector('label[for="qty"]'),qtyHint=qty.parentElement.querySelector(".hint");
+ const targetInput=document.getElementById("target"),targetLabel=document.getElementById("target-label"),targetHint=document.getElementById("target-hint");
 function usernameMode(){const p=products[Number(service.value)];return !!p&&p[1]==="Followers"&&["Instagram","TikTok","YouTube","Facebook"].includes(p[0]);}
 function updateTargetGuidance(){const mode=usernameMode();targetLabel.textContent=mode?"Username akun (tanpa password)":"Tautan akun / konten / toko";targetInput.placeholder=mode?"Contoh: @namapengguna":"https://...";targetHint.textContent=mode?"Masukkan username saja, tanpa password atau OTP. Tautan profil juga dapat digunakan.":"Untuk Likes, Views, dan layanan Shopee, masukkan tautan lengkap tujuan.";}
 products.forEach((p,i)=>{
@@ -101,8 +102,9 @@ products.forEach((p,i)=>{
  catalog.appendChild(card);
  const opt=document.createElement("option");opt.value=i;opt.textContent=p[0]+" — "+p[1]+" ("+rupiah(p[2])+"/1.000)";service.appendChild(opt);
 });
-function updateTotal(){const p=products[Number(service.value)||0],count=Number(qty.value);total.textContent=Number.isSafeInteger(count)&&count>=50?rupiah(p[2]*count/1000):"—"}
-service.addEventListener("change",()=>{updateTotal();updateTargetGuidance()});qty.addEventListener("input",updateTotal);updateTargetGuidance();
+function updateQuantityLabel(){const p=products[Number(service.value)||0],name=p[1].toLowerCase();qtyLabel.textContent="Jumlah pesanan ("+name+")";qtyHint.textContent="Minimal pemesanan 50 "+name+". Anda dapat mengetik jumlah sendiri.";}
+ function updateTotal(){const p=products[Number(service.value)||0],count=Number(qty.value);total.textContent=Number.isSafeInteger(count)&&count>=50?rupiah(p[2]*count/1000):"—"}
+service.addEventListener("change",()=>{updateTotal();updateTargetGuidance();updateQuantityLabel()});qty.addEventListener("input",updateTotal);updateTargetGuidance();updateQuantityLabel();
 catalog.addEventListener("click",e=>{const b=e.target.closest("button[data-index]");if(!b)return;service.value=b.dataset.index;updateTotal();document.getElementById("pesan").scrollIntoView({behavior:"smooth"})});
 const orderButton=document.getElementById("send");
 const orderStatus=document.getElementById("order-status");
