@@ -103,17 +103,21 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function safeUrl(value,platform){
  const raw=String(value??'').trim();
  if(!raw)return '#';
+ // Accept a complete external URL, including URLs without an explicit scheme.
  try{
-  const candidate=/^https?:\/\//i.test(raw)?raw:'https://'+raw;
+  const candidate=/^https?:\/\//i.test(raw)?raw:'https://'+raw.replace(/^\/+/,'');
   const u=new URL(candidate);
-  if(!['http:','https:'].includes(u.protocol))return '#';
-  if(u.hostname.includes('.')&&!u.hostname.startsWith('.'))return u.href;
+  if(['http:','https:'].includes(u.protocol)&&u.hostname.includes('.'))return u.href;
  }catch{}
+ // Otherwise interpret the target as a social profile username.
  const handle=raw.replace(/^@/,'').replace(/^\/+|\/+$/g,'');
  if(!/^[a-zA-Z0-9._-]{1,100}$/.test(handle))return '#';
  const p=String(platform??'').toLowerCase();
- const hosts={instagram:'https://www.instagram.com/',tiktok:'https://www.tiktok.com/@',youtube:'https://www.youtube.com/@',facebook:'https://www.facebook.com/'};
- const base=hosts[p];
+ let base='';
+ if(p.includes('instagram')||p==='ig')base='https://www.instagram.com/';
+ else if(p.includes('tiktok')||p==='tt')base='https://www.tiktok.com/@';
+ else if(p.includes('youtube')||p==='yt')base='https://www.youtube.com/@';
+ else if(p.includes('facebook')||p==='fb')base='https://www.facebook.com/';
  return base?base+encodeURIComponent(handle):'#';
 }
 async function loadOrders(){
