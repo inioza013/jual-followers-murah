@@ -86,7 +86,8 @@ function render(){
  const cell=(html)=>{const td=document.createElement('td');td.innerHTML=html;tr.append(td);return td};
  cell('<b>'+esc(o.order_code)+'</b><small>'+new Date(o.created_at).toLocaleString('id-ID')+'</small>');
  cell('<b>'+esc(o.customer_name)+'</b><small>'+esc(o.customer_whatsapp)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="https://wa.me/'+encodeURIComponent(o.customer_whatsapp)+'">Buka WhatsApp</a></small>');
-  cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="'+safeUrl(o.target_url,o.platform)+'">Target</a></small>');
+  const username=getTargetUsername(o.target_url,o.platform,o.service_name);
+  cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small>'+(username?'<small>Username pelanggan: <b>'+esc(username)+'</b></small>':'')+'<small><a style="color:#83bdff" target="_blank" rel="noopener" href="'+safeUrl(o.target_url,o.platform)+'">Target</a></small>');
  cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' unit</b><small class="money">'+money(o.total_amount)+'</small>');
  cell('<span class="status">'+(payLabels[p.payment_status]||'Belum ada data')+'</span><small>'+esc(p.payment_method||'-')+'</small><small>'+esc(p.provider_reference||'')+'</small>');
  const td=cell('');
@@ -100,6 +101,20 @@ function render(){
  });
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function getTargetUsername(value,platform,service){
+ if(!/followers|subscribers/i.test(String(service||'')))return '';
+ try{
+  const raw=String(value||'').trim();if(!raw)return '';
+  const u=new URL(/^https?:\\/\\//i.test(raw)?raw:'https://'+raw.replace(/^\\/+/,'')); 
+  const p=String(platform||'').toLowerCase();
+  const path=decodeURIComponent(u.pathname).replace(/^\\/+|\\/+$/g,'');
+  if(p.includes('youtube')){const m=path.match(/^@?([^/]+)/);return m?(m[1].startsWith('@')?m[1]:'@'+m[1]):'';}
+  if(p.includes('tiktok')){const m=path.match(/^@?([^/]+)/);return m?'@'+m[1]:'';}
+  const first=path.split('/')[0];
+  return first&&!['p','reel','reels','stories','watch','share'].includes(first.toLowerCase())?'@'+first.replace(/^@/,''):'';
+ }catch{return '';}
+}
+
 function safeUrl(value,platform){
  const raw=String(value??'').trim();
  if(!raw)return '#';
