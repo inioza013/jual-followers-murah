@@ -87,7 +87,9 @@ function render(){
  cell('<b>'+esc(o.order_code)+'</b><small>'+new Date(o.created_at).toLocaleString('id-ID')+'</small>');
  cell('<b>'+esc(o.customer_name)+'</b><small>'+esc(o.customer_whatsapp)+'</small><small><a style="color:#83bdff" target="_blank" rel="noopener" href="https://wa.me/'+encodeURIComponent(o.customer_whatsapp)+'">Buka WhatsApp</a></small>');
   const targetValue=o.target_url||o.target_link||o.target||o.profile_url||o.target_username||'';
-   const username=o.target_username||getTargetUsername(targetValue,o.platform,o.service_name);
+  const parsedUsername=getTargetUsername(targetValue,o.platform,o.service_name);
+  const targetLooksLikeUrl=/^(?:https?:\/\/|www\.)/i.test(String(targetValue).trim())||/^[a-z0-9.-]+\.[a-z]{2,}\//i.test(String(targetValue).trim());
+  const username=parsedUsername||(!targetLooksLikeUrl?(o.target_username||''):'');
   const targetHref=username?safeUrl(username,o.platform):safeUrl(targetValue,o.platform);
   cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small>'+(username?'<small>Username pelanggan: <b>'+esc(username)+'</b></small>':'')+'<small><a style="color:#83bdff" target="_blank" rel="noopener noreferrer" href="'+esc(targetHref)+'">Target</a></small>');
  cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' '+esc(quantityUnit(o.service_name))+'</b><small class="money">'+money(o.total_amount)+'</small>');
@@ -114,6 +116,8 @@ function quantityUnit(serviceName){
 function getTargetUsername(value,platform,service){
  try{
   const raw=String(value||'').trim();if(!raw)return '';
+  // Likes/views target individual content; retain the submitted URL rather than converting it to a profile.
+  if(/like|view|visit/i.test(String(service||'')))return '';
   // A full URL is preserved for channel IDs, content URLs and profile URLs with query parameters.
   const candidate=/^https?:\/\//i.test(raw)?raw:'https://'+raw.replace(/^\/+/, '');
   const u=new URL(candidate);
