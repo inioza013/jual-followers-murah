@@ -19,7 +19,7 @@
 <section id="activateBox" class="panel login hidden"><h2>Aktivasi akun admin</h2><p class="muted">Tautan undangan valid terdeteksi. Buat kata sandi baru untuk akun admin JFM.</p><form id="activateForm"><div class="field"><label for="newPassword">Kata sandi baru (minimal 8 karakter)</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></div><div class="field"><label for="confirmPassword">Ulangi kata sandi</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></div><button id="activateBtn" type="submit">Aktifkan akun</button></form><div id="activateMsg" aria-live="polite"></div></section>
 <section id="dashboard" class="hidden">
 <div class="stats"><div class="stat"><span class="muted">Total tampil</span><b id="total">0</b></div><div class="stat"><span class="muted">Menunggu konfirmasi</span><b id="waiting">0</b></div><div class="stat"><span class="muted">Menunggu pembayaran</span><b id="unpaid">0</b></div><div class="stat"><span class="muted">Selesai</span><b id="done">0</b></div></div>
-<div class="panel"><div class="toolbar"><h2 style="margin:0">Daftar Pesanan</h2><span style="flex:1"></span><input id="search" placeholder="Cari kode, nama, WhatsApp…"><button id="refresh" class="secondary">Muat ulang</button></div><div id="msg" aria-live="polite"></div><div class="tablewrap"><table><thead><tr><th>Pesanan</th><th>Pelanggan</th><th>Layanan</th><th>Jumlah / Total</th><th>Pembayaran</th><th>Status & tindakan</th></tr></thead><tbody id="orders"><tr><td colspan="6" class="empty">Memuat…</td></tr></tbody></table></div></div>
+<div class="panel"><div class="toolbar"><h2 style="margin:0">Daftar Pesanan</h2><span style="flex:1"></span><input id="search" type="search" aria-label="Cari pesanan berdasarkan kode, nama, atau WhatsApp" placeholder="Cari kode, nama, WhatsApp…"><button id="refresh" class="secondary">Muat ulang</button></div><div id="msg" aria-live="polite"></div><div class="tablewrap"><table><thead><tr><th>Pesanan</th><th>Pelanggan</th><th>Layanan</th><th>Jumlah / Total</th><th>Pembayaran</th><th>Status & tindakan</th></tr></thead><tbody id="orders"><tr><td colspan="6" class="empty">Memuat…</td></tr></tbody></table></div></div>
 </section>
 </main>
 <script>
@@ -90,7 +90,7 @@ function render(){
    const username=o.target_username||getTargetUsername(targetValue,o.platform,o.service_name);
   const targetHref=username?safeUrl(username,o.platform):safeUrl(targetValue,o.platform);
   cell('<b>'+esc(o.platform)+'</b><small>'+esc(o.service_name)+'</small>'+(username?'<small>Username pelanggan: <b>'+esc(username)+'</b></small>':'')+'<small><a style="color:#83bdff" target="_blank" rel="noopener noreferrer" href="'+esc(targetHref)+'">Target</a></small>');
- cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' unit</b><small class="money">'+money(o.total_amount)+'</small>');
+ cell('<b>'+Number(o.quantity).toLocaleString('id-ID')+' '+esc(quantityUnit(o.service_name))+'</b><small class="money">'+money(o.total_amount)+'</small>');
  cell('<span class="status">'+(payLabels[p.payment_status]||'Belum ada data')+'</span><small>'+esc(p.payment_method||'-')+'</small><small>'+esc(p.provider_reference||'')+'</small>');
  const td=cell('');
  const wrap=document.createElement('div');wrap.className='actions';
@@ -103,18 +103,41 @@ function render(){
  });
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function quantityUnit(serviceName){
+ const s=String(serviceName||'').toLowerCase();
+ if(s.includes('follower'))return s.includes('store')?'followers toko':'followers';
+ if(s.includes('subscriber'))return 'subscribers';
+ if(s.includes('like'))return 'likes';
+ if(s.includes('view')||s.includes('visit'))return s.includes('visit')?'kunjungan produk':'views';
+ return 'pesanan';
+}
 function getTargetUsername(value,platform,service){
  try{
   const raw=String(value||'').trim();if(!raw)return '';
-  const candidate=raw.includes('://')?raw:'https://'+raw;
+  // A full URL is preserved for channel IDs, content URLs and profile URLs with query parameters.
+  const candidate=/^https?:\/\//i.test(raw)?raw:'https://'+raw.replace(/^\/+/, '');
   const u=new URL(candidate);
   const p=String(platform||'').toLowerCase();
   const parts=u.pathname.split('/').filter(Boolean);
   if(!parts.length)return '';
-  if(p.includes('youtube')){const h=parts[0];return h.startsWith('@')?h:'@'+h;}
-  if(p.includes('tiktok'))return parts[0].startsWith('@')?parts[0]:'@'+parts[0];
-  const first=parts[0];
-  return ['p','reel','reels','stories','watch','share'].includes(first.toLowerCase())?'':'@'+first.replace(/^@/,'');
+  const first=parts[0],lower=first.toLowerCase();
+  if(p.includes('youtube')){
+   if(first.startsWith('@')&&parts.length===1)return first;
+   // /channel/UC..., /c/..., /user/... and /watch?... must remain the original URL.
+   return '';
+  }
+  if(p.includes('tiktok')){
+   return first.startsWith('@')?first:'';
+  }
+  if(p.includes('facebook')){
+   if(['profile.php','people','pages','groups','watch','share','reel','reels'].includes(lower))return '';
+   return parts.length===1?'@'+first.replace(/^@/,''):'';
+  }
+  if(p.includes('instagram')){
+   if(['p','reel','reels','stories','share','explore'].includes(lower))return '';
+   return parts.length===1?'@'+first.replace(/^@/,''):'';
+  }
+  return '';
  }catch{return '';}
 }
 
